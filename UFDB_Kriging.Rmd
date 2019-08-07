@@ -1,0 +1,10 @@
+---
+title: "Kriging in R"
+output: html_notebook_krig
+---
+#Import libraries for Kriging 
+```
+library(sp)
+library(gstat)
+```
+
