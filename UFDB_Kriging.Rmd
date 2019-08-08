@@ -1,10 +1,42 @@
 ---
-title: "Kriging in R"
-output: html_notebook_krig
+title: "UFDB Testing"
+output: html_test
 ---
-#Import libraries for Kriging 
-```
+
+```{r}
+#library(maptools)
+library(maps)
+library(mapproj)
 library(sp)
-library(gstat)
+library(rgdal)
+library(ggplot2)
 ```
+
+```{r}
+#Get Extent Shapefile
+myDIR <- "C:/ArcGIS/TempSpace.gdb"
+extentFILE <- readOGR(myDIR, "NA_Extent")
+
+class(extentFILE)
+mode(extentFILE)
+length(extentFILE)
+
+#Construct as a DataFrame 
+extentDF <- fortify(extentFILE)
+
+class(extentDF)
+dim(extentDF)
+```
+
+```{r}
+#Map Extent
+names(extentDF)
+ggplot(data = extentDF, aes(x=long,y=lat, group=group)) + geom_path() + coord_map("mercator")
+```
+
+```{r}
+#Get Forecasted UFDB 
+```
+
+
 
