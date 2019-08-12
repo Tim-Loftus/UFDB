@@ -34,9 +34,19 @@ names(extentDF)
 ggplot(data = extentDF, aes(x=long,y=lat, group=group)) + geom_path() + coord_map("mercator")
 ```
 
-```{r}
-#Get Forecasted UFDB 
-```
 
+
+
+```{r}
+#Connect to Forecasted UFDB DB 
+library(odbc)
+odbc::odbcListDrivers()
+con <- dbConnect(odbc(),
+                 Driver="SQL Server",
+                 Server="widgetsql-03.accu.accuwx.com",
+                 Database="adc_forecast",
+                 UID="AES_DataReader",
+                 PWD="AES_DataR3ad3r!")
+```
 
 
