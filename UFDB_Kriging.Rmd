@@ -2,18 +2,35 @@
 title: "UFDB Testing"
 output: html_test
 ---
-
+## Default repo
+local({r <- getOption("repos")
+       r["CRAN"] <- "https://cloud.r-project.org"
+       options(repos=r)
+})
 ```{r}
-#library(maptools)
+file.edit("C:/R/Project/UFDB/.Rprofile")
+# This opens up a script window, within which you can enter in your library commands:
+install.packages("maps")
+install.packages("mapproj")
+install.packages("sp")
+install.packages("rgdal")
+install.packages("ggplot2")
+install.packages("odbc")
+install.packages("DBI")
+install.packages("dbplyr")
 library(maps)
 library(mapproj)
 library(sp)
 library(rgdal)
 library(ggplot2)
+library(odbc)
+library(DBI)
+library(dbplyr)
 ```
 
+
 ```{r}
-#Get Extent Shapefile
+#Get Extent Shapefile:
 myDIR <- "C:/ArcGIS/TempSpace.gdb"
 extentFILE <- readOGR(myDIR, "NA_Extent")
 
@@ -21,7 +38,7 @@ class(extentFILE)
 mode(extentFILE)
 length(extentFILE)
 
-#Construct as a DataFrame 
+#Construct as a DataFrame: 
 extentDF <- fortify(extentFILE)
 
 class(extentDF)
@@ -29,7 +46,7 @@ dim(extentDF)
 ```
 
 ```{r}
-#Map Extent
+#Map Extent:
 names(extentDF)
 ggplot(data = extentDF, aes(x=long,y=lat, group=group)) + geom_path() + coord_map("mercator")
 ```
@@ -38,8 +55,7 @@ ggplot(data = extentDF, aes(x=long,y=lat, group=group)) + geom_path() + coord_ma
 
 
 ```{r}
-#Connect to Forecasted UFDB DB 
-library(odbc)
+#Connect to Forecasted UFDB DB: 
 odbc::odbcListDrivers()
 con <- dbConnect(odbc(),
                  Driver="SQL Server",
@@ -48,5 +64,51 @@ con <- dbConnect(odbc(),
                  UID="AES_DataReader",
                  PWD="AES_DataR3ad3r!")
 ```
+```{r}
+dbListTables(con)
+#"vw_DayNight", 56
+dbListFields(con,"vw_DayNight")
+#STATION_CODE, DATE, DAY_FLAG, RAIN, SNOW, ICE, TSTORM_POP
+```
 
+```{r}
+#Create table in SQL Server database; a local temporary:
+data <- dbGetQuery(con, "SELECT vw_DayNight.STATION_CODE, vw_DayNight.DATE, vw_DayNight.DAY_FLAG,
+                   vw_DayNight.RAIN, vw_DayNight.SNOW, vw_DayNight.ICE,
+                   vw_DayNight.TSTORM_POP FROM vW_DayNight WHERE vw_DayNight.DAY_FLAG='D' AND vw_DayNight.DATE = '2019-08-15'")
+
+View(data)
+
+frcdata <- setDT(data, keep.rownames = TRUE, check.names = FALSE)
+```
+```{r}
+#Get forecast shapefile and Join forecast data:
+ufdbFILE <- readOGR(myDIR, "UFDB_TEST")
+
+class(ufdbFILE)
+mode(ufdbFILE)
+length(ufdbFILE)
+
+plot(ufdbFILE)
+
+merged_frc <- merge(ufdbFILE, frcdata, by.x="STATION_CO", by.y="STATION_CODE")
+
+```
+```{r}
+View(merged_frc)
+barplot(table(merged_frc$TSTORM_POP))
+```
+
+
+```{r}
+#Kriging Process - Create a variogram model:
+library(gstat)
+merged_frc %>% as.data.frame %>% glimpse
+#Once coerced, the data can just be piped into the next function:
+```
+```{r}
+tstorm.vgm <- variogram(log(TSTORM_POP)~1, merged_frc) #Calculates sample variogram values
+tstorm.fit <- fit.variogram(tstorm.vgm, model=vgm(1, "Sph", 900, 1))
+plot(tstorm.vgm, tstorm.fit)
+```
 
